@@ -2,8 +2,6 @@
 (async () => {
   const SESSION_KEY = "tabPasswordLockUnlocked";
 
-  const { whitelist } = await chrome.storage.local.get("whitelist");
-
   function matchHostname(hostname, patterns) {
     if (!patterns || patterns.length === 0) return false;
     return patterns.some(pattern => {
@@ -15,7 +13,30 @@
     });
   }
 
-  if (whitelist && !matchHostname(window.location.hostname, whitelist)) return;
+  function removeOverlay() {
+    const el = document.getElementById("tab-password-lock-overlay");
+    if (el) el.remove();
+  }
+
+  chrome.storage.onChanged.addListener(async (changes) => {
+    if (!changes.whitelist) return;
+    const { whitelist: newWhitelist } = await chrome.storage.local.get("whitelist");
+    if (!newWhitelist || !matchHostname(window.location.hostname, newWhitelist)) {
+      removeOverlay();
+    }
+  });
+
+  setInterval(() => {
+    try {
+      chrome.runtime.getURL("");
+    } catch (_) {
+      removeOverlay();
+    }
+  }, 2000);
+
+  const { whitelist } = await chrome.storage.local.get("whitelist");
+
+  if (!whitelist || !matchHostname(window.location.hostname, whitelist)) return;
 
   function bytesToHex(bytes) {
     return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -142,10 +163,13 @@
 
   initialLoad = false;
 
-  document.addEventListener("visibilitychange", () => {
+  document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState === "visible") {
       sessionStorage.removeItem(SESSION_KEY);
-      createOverlay();
+      const { whitelist: wl } = await chrome.storage.local.get("whitelist");
+      if (wl && matchHostname(window.location.hostname, wl)) {
+        createOverlay();
+      }
     }
   });
 })();
