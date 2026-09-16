@@ -3,7 +3,19 @@
   const SESSION_KEY = "tabPasswordLockUnlocked";
 
   const { whitelist } = await chrome.storage.local.get("whitelist");
-  if (whitelist && !whitelist.includes(window.location.hostname)) return;
+
+  function matchHostname(hostname, patterns) {
+    if (!patterns || patterns.length === 0) return false;
+    return patterns.some(pattern => {
+      if (pattern.startsWith("*.")) {
+        const suffix = pattern.slice(1);
+        return hostname.endsWith(suffix) || hostname === pattern.slice(2);
+      }
+      return hostname === pattern;
+    });
+  }
+
+  if (whitelist && !matchHostname(window.location.hostname, whitelist)) return;
 
   function bytesToHex(bytes) {
     return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -122,7 +134,18 @@
     });
   }
 
+  let initialLoad = true;
+
   if (sessionStorage.getItem(SESSION_KEY) !== "1") {
     createOverlay();
   }
+
+  initialLoad = false;
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      sessionStorage.removeItem(SESSION_KEY);
+      createOverlay();
+    }
+  });
 })();

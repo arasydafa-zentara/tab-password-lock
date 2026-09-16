@@ -28,7 +28,21 @@ async function deriveHash(password, salt) {
 }
 
 function normalizeHost(raw) {
-  return raw.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const trimmed = raw.trim().toLowerCase();
+  const isWildcard = trimmed.startsWith("*.");
+  let host = trimmed.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  if (isWildcard && !host.startsWith("*.")) {
+    host = "*." + host;
+  }
+  return host;
+}
+
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
 }
 
 function timingSafeEqual(a, b) {
@@ -63,7 +77,7 @@ document.getElementById("save").addEventListener("click", async () => {
 
   if (passwordAlreadyExists) {
     const { passwordHash, salt } = await chrome.storage.local.get(["passwordHash", "salt"]);
-    const oldHash = await deriveHash(oldPasswordInput.value, salt);
+    const oldHash = await deriveHash(oldPasswordInput.value, hexToBytes(salt));
 
     if (!timingSafeEqual(oldHash, passwordHash)) {
       status.textContent = "Current password is incorrect.";
