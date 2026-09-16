@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Password Lock",
+  "version": "2.0.0",
+  "description": "Require a local password before accessing whitelisted sites.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "options_page": "options.html"
+}
